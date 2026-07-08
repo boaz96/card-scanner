@@ -1,0 +1,28 @@
+# 의존성
+node_modules/
+
+# 빌드 산출물
+dist/
+build/
+*.tsbuildinfo
+
+# 환경변수 / 비밀키 — 절대 커밋 금지
+.env
+.env.*
+!.env.example
+*.pem
+service-account*.json
+google-credentials*.json
+
+# 업로드 임시 파일
+server/uploads/
+tmp/
+
+# 로그
+*.log
+npm-debug.log*
+
+# OS / 에디터
+.DS_Store
+.vscode/
+.idea/

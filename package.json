@@ -1,0 +1,27 @@
+{
+  "name": "card-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "컨설턴트용 명함 스캔 웹앱 (Claude Vision + CLOVA OCR + Google Sheets)",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "build:shared": "npm --workspace shared run build",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "dev": "npm run build:shared && concurrently -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
+    "build": "npm run build:shared && npm --workspace server run build && npm --workspace client run build",
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "test": "npm --workspaces --if-present run test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.5.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
