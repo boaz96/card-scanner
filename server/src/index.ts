@@ -3,6 +3,7 @@ import cors from "cors";
 import { env, corsOrigins } from "./env.js";
 import { scanRouter } from "./routes/scan.js";
 import { saveRouter } from "./routes/save.js";
+import { sheetsRouter } from "./routes/sheets.js";
 
 /**
  * Express 진입점(스캐폴드).
@@ -27,11 +28,12 @@ app.get("/api/health", (_req, res) => {
     integrations: {
       anthropic: Boolean(env.ANTHROPIC_API_KEY),
       clovaOcr: Boolean(env.CLOVA_OCR_INVOKE_URL && env.CLOVA_OCR_SECRET_KEY),
+      // 인증(이메일+키)만 되면 true. 대상 시트는 앱에서 지정/생성 가능
       googleSheets: Boolean(
-        env.GOOGLE_SHEETS_CLIENT_EMAIL &&
-          env.GOOGLE_SHEETS_PRIVATE_KEY &&
-          env.GOOGLE_SHEETS_SPREADSHEET_ID,
+        env.GOOGLE_SHEETS_CLIENT_EMAIL && env.GOOGLE_SHEETS_PRIVATE_KEY,
       ),
+      // 기본 대상 시트가 .env 에 지정돼 있는지
+      googleSheetsDefaultTarget: Boolean(env.GOOGLE_SHEETS_SPREADSHEET_ID),
     },
   });
 });
@@ -40,6 +42,8 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/scan", scanRouter);
 // 인식 결과 → Google Sheets 저장
 app.use("/api/save", saveRouter);
+// 시트 대상 관리(메타 조회·탭 추가·시트 생성)
+app.use("/api/sheets", sheetsRouter);
 
 app.listen(env.PORT, () => {
   console.log(`🚀 server listening on http://localhost:${env.PORT}`);

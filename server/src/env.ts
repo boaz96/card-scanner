@@ -30,7 +30,7 @@ const envSchema = z.object({
 
   // Anthropic Claude Vision (1차 추출) — 스캐폴드 단계에선 선택. 다음 단계에서 필수화.
   ANTHROPIC_API_KEY: z.string().optional(),
-  ANTHROPIC_MODEL: z.string().default("claude-3-5-sonnet-latest"),
+  ANTHROPIC_MODEL: z.string().default("claude-sonnet-5"),
 
   // Naver CLOVA OCR (2차 폴백)
   // .env 에 빈 값("")으로 남겨둔 경우 미설정(undefined)으로 취급해 URL 검증을 건너뜀
@@ -49,6 +49,8 @@ const envSchema = z.object({
   GOOGLE_SHEETS_PRIVATE_KEY: z.string().optional(),
   GOOGLE_SHEETS_SPREADSHEET_ID: z.string().optional(),
   GOOGLE_SHEETS_TAB_NAME: z.string().default("명함"),
+  // Workspace 공유 드라이브 ID(설정 시 새 시트를 이 드라이브에 생성·목록 조회)
+  GOOGLE_SHARED_DRIVE_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

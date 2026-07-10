@@ -12,7 +12,8 @@ const baseLlm: LlmRawCard = {
   name_en: "Gildong Hong",
   company: "가인지컨설팅그룹",
   department: "컨설팅본부",
-  title: "책임 컨설턴트",
+  position: "책임",
+  role: "컨설턴트",
   mobile: "010-1234-5678",
   office_phone: "",
   fax: "",
@@ -65,5 +66,19 @@ describe("reconcile", () => {
     });
     expect(out.warnings.some((w) => w.includes("이메일"))).toBe(true);
     expect(out.confidence).toBeLessThan(0.7);
+  });
+
+  it("LLM 이 자체보고한 low_confidence 를 폼 필드 키로 강조한다", () => {
+    const llm: LlmRawCard = { ...baseLlm, low_confidence: ["position", "role", "mobile"] };
+    const out = reconcile(llm, null);
+    expect(out.lowConfidenceFields).toContain("position");
+    expect(out.lowConfidenceFields).toContain("role");
+    expect(out.lowConfidenceFields).toContain("contact.mobile"); // raw 키 매핑 확인
+  });
+
+  it("직급/직책이 분리되어 draft 에 담긴다", () => {
+    const out = reconcile(baseLlm, null);
+    expect(out.draft.position).toBe("책임");
+    expect(out.draft.role).toBe("컨설턴트");
   });
 });

@@ -4,6 +4,8 @@ import type {
   BusinessCard,
   DuplicateAction,
   SaveCardResponse,
+  SheetMeta,
+  SheetList,
 } from "@card-scanner/shared";
 
 /**
@@ -54,26 +56,18 @@ export async function scanCard(image: Blob): Promise<ExtractionResult> {
   return (await res.json()) as ExtractionResult;
 }
 
-/**
- * 확인·보정된 명함을 /api/save 로 저장.
- * @param onDuplicate 중복 시 처리(add/skip/update). 미지정으로 호출 후
- *   status:"duplicate" 를 받으면 사용자 선택을 담아 재호출합니다.
- */
-export async function saveCard(
-  card: BusinessCard,
-  onDuplicate?: DuplicateAction,
-): Promise<SaveCardResponse> {
+/** 공통 fetch + 에러 정규화 헬퍼 */
+async function request<T>(
+  url: string,
+  init: RequestInit,
+  fallbackMsg: string,
+): Promise<T> {
   let res: Response;
   try {
-    res = await fetch("/api/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ card, onDuplicate }),
-    });
+    res = await fetch(url, init);
   } catch {
     throw new ScanApiError("NETWORK", "서버에 연결하지 못했습니다. 네트워크를 확인해 주세요.");
   }
-
   if (!res.ok) {
     let apiError: Partial<ApiError> = {};
     try {
@@ -81,11 +75,65 @@ export async function saveCard(
     } catch {
       /* JSON 아님 */
     }
-    throw new ScanApiError(
-      apiError.code ?? `HTTP_${res.status}`,
-      apiError.message ?? "시트 저장에 실패했습니다. 다시 시도해 주세요.",
-    );
+    throw new ScanApiError(apiError.code ?? `HTTP_${res.status}`, apiError.message ?? fallbackMsg);
   }
+  return (await res.json()) as T;
+}
 
-  return (await res.json()) as SaveCardResponse;
+const jsonInit = (body: unknown): RequestInit => ({
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+export interface SaveTarget {
+  spreadsheetId?: string;
+  tabName?: string;
+}
+
+/**
+ * 확인·보정된 명함을 /api/save 로 저장.
+ * @param onDuplicate 중복 시 처리(add/skip/update). 미지정으로 호출 후
+ *   status:"duplicate" 를 받으면 사용자 선택을 담아 재호출합니다.
+ * @param target 저장 대상 시트/탭(미지정 시 서버 기본값)
+ */
+export async function saveCard(
+  card: BusinessCard,
+  onDuplicate?: DuplicateAction,
+  target?: SaveTarget,
+): Promise<SaveCardResponse> {
+  return request<SaveCardResponse>(
+    "/api/save",
+    jsonInit({ card, onDuplicate, ...target }),
+    "시트 저장에 실패했습니다. 다시 시도해 주세요.",
+  );
+}
+
+/** 공유 드라이브 내 팀 시트 목록(미설정 시 sharedDriveConfigured=false) */
+export async function listSheets(): Promise<SheetList> {
+  return request<SheetList>("/api/sheets/list", { method: "GET" }, "시트 목록을 불러오지 못했습니다.");
+}
+
+/** 스프레드시트 메타(제목 + 탭 목록) 조회. spreadsheetId 생략 시 서버 기본값. */
+export async function getSheetMeta(spreadsheetId?: string): Promise<SheetMeta> {
+  const q = spreadsheetId ? `?spreadsheetId=${encodeURIComponent(spreadsheetId)}` : "";
+  return request<SheetMeta>(`/api/sheets/meta${q}`, { method: "GET" }, "시트 정보를 불러오지 못했습니다.");
+}
+
+/** 탭 추가 → 갱신된 메타 반환 */
+export async function addSheetTab(title: string, spreadsheetId?: string): Promise<SheetMeta> {
+  return request<SheetMeta>(
+    "/api/sheets/tabs",
+    jsonInit({ title, spreadsheetId }),
+    "탭 추가에 실패했습니다.",
+  );
+}
+
+/** 새 스프레드시트 생성(+선택 시 이메일 공유) → 메타 반환 */
+export async function createSheet(title: string, shareWithEmail?: string): Promise<SheetMeta> {
+  return request<SheetMeta>(
+    "/api/sheets",
+    jsonInit({ title, shareWithEmail }),
+    "스프레드시트 생성에 실패했습니다.",
+  );
 }

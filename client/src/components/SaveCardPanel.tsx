@@ -4,7 +4,7 @@ import type {
   DuplicateAction,
   DuplicateMatch,
 } from "@card-scanner/shared";
-import { saveCard } from "../lib/api.js";
+import { saveCard, type SaveTarget } from "../lib/api.js";
 
 /**
  * 인식 결과를 Google Sheets 에 저장하는 패널.
@@ -13,6 +13,8 @@ import { saveCard } from "../lib/api.js";
 
 interface Props {
   card: BusinessCard;
+  /** 저장 대상 시트/탭(미지정 시 서버 기본값) */
+  target?: SaveTarget;
   /** 저장 불가 사유(있으면 버튼 비활성화 + 안내) */
   disabledReason?: string;
 }
@@ -24,13 +26,13 @@ type State =
   | { kind: "done"; message: string; url?: string }
   | { kind: "error"; message: string };
 
-export function SaveCardPanel({ card, disabledReason }: Props) {
+export function SaveCardPanel({ card, target, disabledReason }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
 
   async function run(onDuplicate?: DuplicateAction) {
     setState({ kind: "saving" });
     try {
-      const res = await saveCard(card, onDuplicate);
+      const res = await saveCard(card, onDuplicate, target);
       switch (res.status) {
         case "duplicate":
           setState({ kind: "duplicate", matches: res.matches, url: res.spreadsheetUrl });

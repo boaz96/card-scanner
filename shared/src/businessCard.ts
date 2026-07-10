@@ -41,8 +41,10 @@ export const businessCardSchema = z
     company: optionalText,
     /** 부서 */
     department: optionalText,
-    /** 직함/직책 */
-    title: optionalText,
+    /** 직급/직위 (사원·대리·과장·차장·부장·이사·상무 등 서열) */
+    position: optionalText,
+    /** 직책 (팀장·실장·본부장·센터장·PM·CTO 등 담당 역할) */
+    role: optionalText,
     /** 연락처 묶음 */
     contact: contactSchema.default({}),
     /** 이메일 */
@@ -97,7 +99,8 @@ export const CARD_FIELD_KEYS = [
   "nameEn",
   "company",
   "department",
-  "title",
+  "position",
+  "role",
   "contact.mobile",
   "contact.office",
   "contact.fax",
@@ -107,6 +110,23 @@ export const CARD_FIELD_KEYS = [
   "memo",
 ] as const;
 export type CardFieldKey = (typeof CARD_FIELD_KEYS)[number];
+
+/** LLM raw 키 → 폼 필드 키 매핑(저신뢰 필드 병합에 사용) */
+export const RAW_TO_FIELD_KEY: Readonly<Record<string, CardFieldKey>> = {
+  name: "name",
+  name_en: "nameEn",
+  company: "company",
+  department: "department",
+  position: "position",
+  role: "role",
+  mobile: "contact.mobile",
+  office_phone: "contact.office",
+  fax: "contact.fax",
+  email: "email",
+  website: "website",
+  address: "address",
+  memo: "memo",
+};
 
 /**
  * LLM 이 반환하도록 요구하는 "날것의" JSON 스키마.
@@ -118,7 +138,8 @@ export const llmRawCardSchema = z.object({
   name_en: z.string().nullable().optional(),
   company: z.string().nullable().optional(),
   department: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
+  position: z.string().nullable().optional(),
+  role: z.string().nullable().optional(),
   mobile: z.string().nullable().optional(),
   office_phone: z.string().nullable().optional(),
   fax: z.string().nullable().optional(),
@@ -126,8 +147,13 @@ export const llmRawCardSchema = z.object({
   website: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   memo: z.string().nullable().optional(),
-  /** LLM 자기평가 신뢰도 0~1 */
+  /** LLM 자기평가 전체 신뢰도 0~1 */
   confidence: z.number().min(0).max(1).nullable().optional(),
+  /**
+   * 모델이 스스로 확신이 낮다고 판단한 필드의 raw 키 목록
+   * (예: ["position", "role", "email"]). 검수 폼 강조에 활용.
+   */
+  low_confidence: z.array(z.string()).nullable().optional(),
 });
 export type LlmRawCard = z.infer<typeof llmRawCardSchema>;
 
@@ -146,6 +172,10 @@ export const saveCardRequestSchema = z.object({
    * 프론트가 사용자 선택(add/skip/update)을 담아 재요청합니다.
    */
   onDuplicate: duplicateActionSchema.optional(),
+  /** 저장 대상 스프레드시트 ID(생략 시 .env 기본값) */
+  spreadsheetId: z.string().optional(),
+  /** 저장 대상 탭 이름(생략 시 .env 기본값) */
+  tabName: z.string().optional(),
 });
 export type SaveCardRequest = z.infer<typeof saveCardRequestSchema>;
 
@@ -211,9 +241,10 @@ export const SHEET_COLUMNS: ReadonlyArray<{
   get: (c: BusinessCard, scannedAt: Date) => string;
 }> = [
   { header: "이름(한글)", get: (c) => c.name ?? "" },
-  { header: "원본표기", get: (c) => c.nameEn ?? "" },
+  { header: "이름(영어)", get: (c) => c.nameEn ?? "" },
   { header: "회사", get: (c) => c.company ?? "" },
-  { header: "직책", get: (c) => c.title ?? "" },
+  { header: "직급", get: (c) => c.position ?? "" },
+  { header: "직책", get: (c) => c.role ?? "" },
   { header: "주소", get: (c) => c.address ?? "" },
   { header: "휴대폰", get: (c) => c.contact?.mobile ?? "" },
   { header: "이메일", get: (c) => c.email ?? "" },
@@ -225,15 +256,16 @@ export const COL = {
   NAME: 0,
   NAME_EN: 1,
   COMPANY: 2,
-  TITLE: 3,
-  ADDRESS: 4,
-  MOBILE: 5,
-  EMAIL: 6,
-  SCANNED_AT: 7,
+  POSITION: 3,
+  ROLE: 4,
+  ADDRESS: 5,
+  MOBILE: 6,
+  EMAIL: 7,
+  SCANNED_AT: 8,
 } as const;
 
-/** 마지막 컬럼의 A1 표기 문자(8컬럼 → "H") */
-export const SHEET_LAST_COLUMN = "H";
+/** 마지막 컬럼의 A1 표기 문자(9컬럼 → "I") */
+export const SHEET_LAST_COLUMN = "I";
 
 /** 시트 헤더 행 (문자열 배열) */
 export const SHEET_HEADERS: ReadonlyArray<string> = SHEET_COLUMNS.map(

@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type {
   BusinessCard,
   CardFieldKey,
   ExtractionResult,
 } from "@card-scanner/shared";
 import { SaveCardPanel } from "./SaveCardPanel.js";
+import { SaveTargetPanel } from "./SaveTargetPanel.js";
+import type { SaveTarget } from "../lib/api.js";
 
 /**
  * 검수/수정 화면.
@@ -29,6 +31,9 @@ interface FieldDef {
 
 export function ReviewForm({ result, onReset }: Props) {
   const [card, setCard] = useState<BusinessCard>(result.card);
+  const [target, setTarget] = useState<SaveTarget>({});
+  // SaveTargetPanel 에 넘길 안정적 콜백(effect 루프 방지)
+  const handleTargetChange = useCallback((t: SaveTarget) => setTarget(t), []);
   const lowSet = useMemo(
     () => new Set(result.lowConfidenceFields),
     [result.lowConfidenceFields],
@@ -36,10 +41,11 @@ export function ReviewForm({ result, onReset }: Props) {
 
   const fields: FieldDef[] = [
     { key: "name", label: "이름(한글)", value: card.name ?? "", onChange: (v) => setCard({ ...card, name: v }), autoComplete: "name" },
-    { key: "nameEn", label: "원본표기(영문)", value: card.nameEn ?? "", onChange: (v) => setCard({ ...card, nameEn: v }) },
+    { key: "nameEn", label: "이름(영어)", value: card.nameEn ?? "", onChange: (v) => setCard({ ...card, nameEn: v }) },
     { key: "company", label: "회사", value: card.company ?? "", onChange: (v) => setCard({ ...card, company: v }), autoComplete: "organization" },
     { key: "department", label: "부서", value: card.department ?? "", onChange: (v) => setCard({ ...card, department: v }) },
-    { key: "title", label: "직책", value: card.title ?? "", onChange: (v) => setCard({ ...card, title: v }), autoComplete: "organization-title" },
+    { key: "position", label: "직급/직위", value: card.position ?? "", onChange: (v) => setCard({ ...card, position: v }), autoComplete: "organization-title" },
+    { key: "role", label: "직책", value: card.role ?? "", onChange: (v) => setCard({ ...card, role: v }) },
     { key: "contact.mobile", label: "휴대폰", value: card.contact.mobile ?? "", onChange: (v) => setCard({ ...card, contact: { ...card.contact, mobile: v } }), type: "tel", autoComplete: "tel" },
     { key: "contact.office", label: "사무실 전화", value: card.contact.office ?? "", onChange: (v) => setCard({ ...card, contact: { ...card.contact, office: v } }), type: "tel" },
     { key: "contact.fax", label: "팩스", value: card.contact.fax ?? "", onChange: (v) => setCard({ ...card, contact: { ...card.contact, fax: v } }), type: "tel" },
@@ -100,8 +106,11 @@ export function ReviewForm({ result, onReset }: Props) {
         })}
       </form>
 
+      <SaveTargetPanel onChange={handleTargetChange} />
+
       <SaveCardPanel
         card={card}
+        target={target}
         disabledReason={isValid ? undefined : "이름 또는 회사명을 입력해야 저장할 수 있어요."}
       />
 

@@ -15,7 +15,8 @@ const card: BusinessCard = {
   name: "홍길동",
   nameEn: "Gildong Hong",
   company: "가인지컨설팅그룹",
-  title: "책임 컨설턴트",
+  position: "책임",
+  role: "컨설턴트",
   address: "서울특별시 강남구 테헤란로 000",
   contact: { mobile: "010-1234-5678", office: "", fax: "" },
   email: "gildong.hong@example.com",
@@ -23,14 +24,15 @@ const card: BusinessCard = {
   memo: "",
 };
 
-// 시트 컬럼 순서: 이름,원본표기,회사,직책,주소,휴대폰,이메일,스캔시각
+// 시트 컬럼 순서(9): 이름,원본표기,회사,직급,직책,주소,휴대폰,이메일,스캔시각
+const EMAIL_COL = 7;
 const rowSame = [
-  "홍길동", "Gildong Hong", "가인지컨설팅그룹", "책임", "주소", "010-0000-0000",
-  "gildong.hong@example.com", "2026-01-01",
+  "홍길동", "Gildong Hong", "가인지컨설팅그룹", "책임", "컨설턴트", "주소",
+  "010-0000-0000", "gildong.hong@example.com", "2026-01-01",
 ];
 const rowOther = [
-  "김철수", "Chulsoo Kim", "다른회사", "대리", "부산", "010-9999-9999",
-  "chulsoo@other.com", "2026-01-02",
+  "김철수", "Chulsoo Kim", "다른회사", "대리", "", "부산",
+  "010-9999-9999", "chulsoo@other.com", "2026-01-02",
 ];
 
 describe("findDuplicateRows", () => {
@@ -44,7 +46,7 @@ describe("findDuplicateRows", () => {
   it("이메일이 없고 회사+이름이 같으면 중복으로 잡는다", () => {
     const noEmail: BusinessCard = { ...card, email: "" };
     const rowNoEmail = [...rowSame];
-    rowNoEmail[6] = ""; // 이메일 비움
+    rowNoEmail[EMAIL_COL] = ""; // 이메일 비움
     const m = findDuplicateRows([rowNoEmail], noEmail);
     expect(m).toHaveLength(1);
   });
@@ -52,7 +54,7 @@ describe("findDuplicateRows", () => {
   it("회사만 같고 이름이 다르면 중복이 아니다", () => {
     const rowDiffName = [...rowSame];
     rowDiffName[0] = "다른사람";
-    rowDiffName[6] = ""; // 이메일도 비워 이메일 매칭 배제
+    rowDiffName[EMAIL_COL] = ""; // 이메일도 비워 이메일 매칭 배제
     const noEmail: BusinessCard = { ...card, email: "" };
     const m = findDuplicateRows([rowDiffName], noEmail);
     expect(m).toHaveLength(0);
@@ -69,7 +71,9 @@ describe("cardToSheetRow", () => {
     const row = cardToSheetRow(card, at);
     expect(row).toHaveLength(SHEET_HEADERS.length);
     expect(row[0]).toBe("홍길동");
-    expect(row[6]).toBe("gildong.hong@example.com");
-    expect(row[7]).toBe("2026-07-06T00:00:00.000Z");
+    expect(row[3]).toBe("책임"); // 직급
+    expect(row[4]).toBe("컨설턴트"); // 직책
+    expect(row[7]).toBe("gildong.hong@example.com");
+    expect(row[8]).toBe("2026-07-06T00:00:00.000Z");
   });
 });

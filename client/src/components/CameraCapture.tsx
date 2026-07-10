@@ -80,6 +80,7 @@ export function CameraCapture({ onResult }: Props) {
     try {
       const result = await scanCard(processed.blob);
       onResult(result);
+      console.log(result);
     } catch (e) {
       setErrorText(toMessage(e));
     } finally {

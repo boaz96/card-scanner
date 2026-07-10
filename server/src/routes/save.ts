@@ -5,7 +5,7 @@ import { toAppError } from "../errors.js";
 
 /**
  * POST /api/save — 확인·보정된 표준 JSON 을 받아 Google Sheets 에 저장.
- * body: { card, source?, onDuplicate? }  (application/json)
+ * body: { card, source?, onDuplicate?, spreadsheetId?, tabName? }  (application/json)
  */
 export const saveRouter = Router();
 
@@ -22,7 +22,11 @@ saveRouter.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await saveCard(parsed.data.card, parsed.data.onDuplicate);
+    const result = await saveCard(parsed.data.card, {
+      spreadsheetId: parsed.data.spreadsheetId,
+      tabName: parsed.data.tabName,
+      onDuplicate: parsed.data.onDuplicate,
+    });
     return res.json(result);
   } catch (e) {
     const appError = toAppError(e);

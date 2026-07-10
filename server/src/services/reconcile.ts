@@ -1,7 +1,8 @@
-import type {
-  CardFieldKey,
-  ExtractionSource,
-  LlmRawCard,
+import {
+  RAW_TO_FIELD_KEY,
+  type CardFieldKey,
+  type ExtractionSource,
+  type LlmRawCard,
 } from "@card-scanner/shared";
 import type { OcrResult } from "./clovaOcr.js";
 
@@ -17,7 +18,8 @@ export interface CardDraft {
   nameEn: string;
   company: string;
   department: string;
-  title: string;
+  position: string;
+  role: string;
   contact: { mobile: string; office: string; fax: string };
   email: string;
   website: string;
@@ -63,7 +65,8 @@ function fromLlm(llm: LlmRawCard): CardDraft {
     nameEn: str(llm.name_en),
     company: str(llm.company),
     department: str(llm.department),
-    title: str(llm.title),
+    position: str(llm.position),
+    role: str(llm.role),
     contact: {
       mobile: str(llm.mobile),
       office: str(llm.office_phone),
@@ -84,6 +87,12 @@ export function reconcile(
   const warnings: string[] = [];
   const lowConf = new Set<CardFieldKey>();
   let confidence = clamp01(llm.confidence ?? 0.6);
+
+  // 모델이 스스로 확신이 낮다고 보고한 필드를 우선 반영(raw 키 → 폼 키)
+  for (const rawKey of llm.low_confidence ?? []) {
+    const mapped = RAW_TO_FIELD_KEY[rawKey];
+    if (mapped) lowConf.add(mapped);
+  }
 
   if (!ocr || ocr.text.trim().length === 0) {
     if (ocr === null) {
