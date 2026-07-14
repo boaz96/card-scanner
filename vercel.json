@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install -w shared -w client",
+  "buildCommand": "npm run build:shared && npm --workspace client run build",
+  "outputDirectory": "client/dist",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://REPLACE-WITH-YOUR-SERVER-URL/api/:path*"
+    }
+  ]
+}
