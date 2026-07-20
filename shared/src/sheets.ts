@@ -23,6 +23,8 @@ export const createSheetRequestSchema = z.object({
   title: z.string().trim().min(1).max(100),
   /** 지정 시 이 Google 계정에 편집자로 공유(서비스계정이 만든 파일을 사용자가 열 수 있게) */
   shareWithEmail: z.string().email().optional(),
+  /** true 면 회사 도메인 전체(GOOGLE_WORKSPACE_DOMAIN)에 편집자로 공유 */
+  shareWithDomain: z.boolean().optional(),
 });
 export type CreateSheetRequest = z.infer<typeof createSheetRequestSchema>;
 

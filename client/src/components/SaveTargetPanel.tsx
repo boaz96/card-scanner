@@ -55,6 +55,7 @@ export function SaveTargetPanel({ onChange }: Props) {
   const [showSheetInput, setShowSheetInput] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [createEmail, setCreateEmail] = useState("");
+  const [createDomain, setCreateDomain] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newTab, setNewTab] = useState("");
   const [showAddTab, setShowAddTab] = useState(false);
@@ -114,15 +115,16 @@ export function SaveTargetPanel({ onChange }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const m = await createSheet(
-        createTitle.trim() || "명함 스캔",
-        sharedDrive ? undefined : createEmail.trim() || undefined,
-      );
+      const m = await createSheet(createTitle.trim() || "명함 스캔", {
+        shareWithEmail: sharedDrive ? undefined : createEmail.trim() || undefined,
+        shareWithDomain: createDomain || undefined,
+      });
       setMeta(m);
       setTarget({ spreadsheetId: m.spreadsheetId, tabName: m.tabs[0] });
       setShowCreate(false);
       setCreateTitle("");
       setCreateEmail("");
+      setCreateDomain(false);
       void loadList(); // 목록 갱신
     } catch (e) {
       setError(toMsg(e));
@@ -205,6 +207,10 @@ export function SaveTargetPanel({ onChange }: Props) {
               <input id="new-email" type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} placeholder="me@company.com" />
             </>
           )}
+          <label className="checkbox-row">
+            <input type="checkbox" checked={createDomain} onChange={(e) => setCreateDomain(e.target.checked)} />
+            회사 전체(도메인)에 편집자로 공유
+          </label>
           <button type="button" className="btn btn-primary btn-sm" onClick={handleCreate} disabled={busy}>만들기</button>
           {sharedDrive ? (
             <p className="field-note">공유 드라이브에 생성되어 팀 전원이 바로 볼 수 있습니다.</p>

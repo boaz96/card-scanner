@@ -74,9 +74,9 @@ sheetsRouter.post("/", async (req: Request, res: Response) => {
   if (!parsed.success) {
     return fail(res, 400, "INVALID_BODY", "시트 생성 요청 형식이 올바르지 않습니다.");
   }
-  const { title, shareWithEmail } = parsed.data;
+  const { title, shareWithEmail, shareWithDomain } = parsed.data;
   try {
-    return res.json(await createSpreadsheet(title, shareWithEmail));
+    return res.json(await createSpreadsheet(title, shareWithEmail, shareWithDomain));
   } catch (e) {
     return handle(res, e, "create");
   }

@@ -219,6 +219,25 @@ curl -s -F "image=@samples/sample-card.jpg;type=image/jpeg" \
 npm --workspace server run test   # reconcile 보정 + 시트 중복탐지(vitest)
 ```
 
+## 2차 OCR (Naver CLOVA) — 목모드와 실키 전환
+2차 OCR은 LLM 결과를 대조·보정합니다. 키 발급 전에도 경로를 테스트할 수 있도록 **목모드**를 제공합니다.
+
+- **목모드(현재 기본, 키 발급 전)**: `.env` 에 `CLOVA_OCR_MOCK=true`. 실제 호출 없이 목데이터로 2차 경로가 돌아, 인식 결과 `source` 가 `merged` 로 표시됩니다. 목데이터는 이메일/전화 패턴이 없어 실제 인식값을 덮어쓰지 않습니다(빈 필드 보정 없음).
+- **실키로 전환(발급 후)**:
+  1. [ncloud.com](https://www.ncloud.com) → **CLOVA OCR** → General 도메인 생성 → **Invoke URL** 과 **Secret Key** 발급
+  2. `.env` 에 `CLOVA_OCR_INVOKE_URL` / `CLOVA_OCR_SECRET_KEY` 입력, `CLOVA_OCR_MOCK=false`(또는 줄 삭제)
+  3. 서버 재시작 → 이제 실제 CLOVA 로 전화·이메일·회사명을 교차보정합니다(코드 변경 불필요, 자동 전환)
+
+즉 지금은 배선만 확인하고, 키만 채우면 그대로 실동작합니다.
+
+## 회사 도메인 전체 공유(Workspace)
+"새 시트 만들기" 시 **회사 전체(도메인) 편집자 공유** 체크박스를 켜면, 서버가 Drive `permissions.create`(`type:"domain"`, `role:"writer"`)로 `GOOGLE_WORKSPACE_DOMAIN`(예: `gainge.com`) 전체에 공유합니다.
+- 자기 도메인 공유는 **내부 공유**라 대개 기본 허용됩니다. 막히면 Workspace 관리자가 Drive 공유 정책을 한 번 허용하면 계속 유지됩니다.
+- 공유 실패는 비치명적: 시트는 생성되고 로그만 남깁니다(수동 공유 가능).
+
+## 명함 정렬 가이드(9×5cm)
+촬영 화면에 표준 명함 비율(9:5) 가이드 사각형을 띄우고, **촬영 시 그 영역만 잘라서**(배경 제거) 업로드해 인식률을 높입니다. 가이드 폭·비율은 `useCamera.ts` 의 `GUIDE_WIDTH_RATIO`·`GUIDE_ASPECT` 와 CSS `.guide-box` 를 동기화합니다.
+
 ## 검수/수정 화면
 인식 직후 편집 가능한 폼이 뜹니다. 신뢰도가 낮은 필드(OCR 보정·불일치·핵심 누락)는 **노란색 + "확인 필요" 배지**로 강조되고 `aria-describedby` 안내가 붙습니다. 사용자가 확인·수정 후 **시트에 저장**을 누르면 `/api/save` 를 호출하고, 성공 시 토스트와 저장된 시트 링크를 보여줍니다. 이름/회사가 모두 비면 저장 버튼이 비활성화됩니다.
 

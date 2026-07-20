@@ -129,11 +129,14 @@ export async function addSheetTab(title: string, spreadsheetId?: string): Promis
   );
 }
 
-/** 새 스프레드시트 생성(+선택 시 이메일 공유) → 메타 반환 */
-export async function createSheet(title: string, shareWithEmail?: string): Promise<SheetMeta> {
+/** 새 스프레드시트 생성(+선택 시 이메일/도메인 공유) → 메타 반환 */
+export async function createSheet(
+  title: string,
+  opts?: { shareWithEmail?: string; shareWithDomain?: boolean },
+): Promise<SheetMeta> {
   return request<SheetMeta>(
     "/api/sheets",
-    jsonInit({ title, shareWithEmail }),
+    jsonInit({ title, ...opts }),
     "스프레드시트 생성에 실패했습니다.",
   );
 }

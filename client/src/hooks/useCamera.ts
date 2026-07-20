@@ -4,7 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * 후면 카메라(getUserMedia, facingMode:"environment") 생명주기 관리 훅.
  * - 지원 여부/권한 거부를 상태로 구분해, 화면에서 파일 업로드 폴백으로 전환할 수 있게 합니다.
  * - 언마운트 시 스트림 트랙을 반드시 정리합니다.
+ * - capture() 는 화면의 9:5 가이드 영역만 잘라서 반환합니다(배경 제거 → 인식률↑).
  */
+
+// 화면 가이드(.guide-box)와 반드시 동기화: width 88%, 비율 9:5
+const GUIDE_WIDTH_RATIO = 0.88;
+const GUIDE_ASPECT = 9 / 5;
 
 export type CameraStatus =
   | "idle" // 아직 시작 안 함
@@ -92,15 +97,56 @@ export function useCamera(): UseCamera {
 
   const capture = useCallback(async (): Promise<Blob> => {
     const video = videoRef.current;
-    if (!video || !video.videoWidth) {
+    const vW = video?.videoWidth ?? 0;
+    const vH = video?.videoHeight ?? 0;
+    if (!video || !vW || !vH) {
       throw new Error("카메라 프리뷰가 준비되지 않았습니다.");
     }
+
+    // 화면에 표시된 프리뷰 크기(=프레임). object-fit:cover 기준으로 가이드 영역을 원본 픽셀로 환산.
+    const dispW = video.clientWidth;
+    const dispH = video.clientHeight;
+
+    // 기본값: 크롭 불가 상황이면 전체 프레임 사용
+    let sx = 0;
+    let sy = 0;
+    let sw = vW;
+    let sh = vH;
+
+    if (dispW > 0 && dispH > 0) {
+      // cover: 프레임을 덮도록 확대된 배율
+      const scale = Math.max(dispW / vW, dispH / vH);
+      // 프레임에 실제로 보이는 원본 영역(중앙 크롭)
+      const visibleW = dispW / scale;
+      const visibleH = dispH / scale;
+      const offsetX = (vW - visibleW) / 2;
+      const offsetY = (vH - visibleH) / 2;
+
+      // 화면상의 가이드 사각형(9:5) — 프레임 중앙, 폭 88%
+      const guideWDisp = GUIDE_WIDTH_RATIO * dispW;
+      const guideHDisp = guideWDisp / GUIDE_ASPECT;
+      const guideXDisp = (dispW - guideWDisp) / 2;
+      const guideYDisp = (dispH - guideHDisp) / 2;
+
+      // 가이드 → 원본 픽셀 좌표
+      sx = offsetX + guideXDisp / scale;
+      sy = offsetY + guideYDisp / scale;
+      sw = guideWDisp / scale;
+      sh = guideHDisp / scale;
+
+      // 안전 클램프
+      sx = Math.max(0, Math.min(sx, vW - 1));
+      sy = Math.max(0, Math.min(sy, vH - 1));
+      sw = Math.max(1, Math.min(sw, vW - sx));
+      sh = Math.max(1, Math.min(sh, vH - sy));
+    }
+
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(sw);
+    canvas.height = Math.round(sh);
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D 컨텍스트를 생성할 수 없습니다.");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(

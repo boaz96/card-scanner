@@ -43,6 +43,11 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+  // 키 발급 전 목데이터로 2차 OCR 경로를 배선·검증하기 위한 모의 모드
+  CLOVA_OCR_MOCK: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 
   // Google Sheets (서비스 계정)
   GOOGLE_SHEETS_CLIENT_EMAIL: z.string().optional(),
@@ -51,6 +56,8 @@ const envSchema = z.object({
   GOOGLE_SHEETS_TAB_NAME: z.string().default("명함"),
   // Workspace 공유 드라이브 ID(설정 시 새 시트를 이 드라이브에 생성·목록 조회)
   GOOGLE_SHARED_DRIVE_ID: z.string().optional(),
+  // 회사 Workspace 도메인(예: gainge.com). "회사 전체 공유" 옵션에 사용.
+  GOOGLE_WORKSPACE_DOMAIN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

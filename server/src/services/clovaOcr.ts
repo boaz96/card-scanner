@@ -26,13 +26,28 @@ interface ClovaResponse {
   images?: ClovaImage[];
 }
 
-/** CLOVA OCR 설정 여부 */
+/**
+ * CLOVA OCR 사용 가능 여부.
+ * - 실제 키가 있거나, 모의 모드(CLOVA_OCR_MOCK=true)면 true.
+ */
 export function isClovaConfigured(): boolean {
-  return Boolean(env.CLOVA_OCR_INVOKE_URL && env.CLOVA_OCR_SECRET_KEY);
+  return (
+    Boolean(env.CLOVA_OCR_INVOKE_URL && env.CLOVA_OCR_SECRET_KEY) ||
+    env.CLOVA_OCR_MOCK
+  );
 }
 
 export async function extractWithClova(jpeg: Buffer): Promise<OcrResult> {
+  // 모의 모드: 실제 키 없이 2차 OCR 경로(source:"merged")를 배선·검증하기 위한 목데이터.
+  // 실제 카드 내용과 무관한 안전한 텍스트라 LLM 결과를 훼손하지 않습니다(빈 필드만 보정하는데,
+  // 이메일/전화 패턴이 없어 아무 것도 덮어쓰지 않음). 실제 키 등록 시 자동으로 실호출로 전환됩니다.
   if (!env.CLOVA_OCR_INVOKE_URL || !env.CLOVA_OCR_SECRET_KEY) {
+    if (env.CLOVA_OCR_MOCK) {
+      return {
+        text: "[MOCK OCR] CLOVA 키 등록 전 테스트용 목데이터입니다.",
+        fields: ["[MOCK", "OCR]"],
+      };
+    }
     throw new AppError("OCR_NOT_CONFIGURED", 500, "OCR 이 설정되지 않았습니다.");
   }
 

@@ -114,8 +114,13 @@ export function CameraCapture({ onResult }: Props) {
                 <p>{errorMessage}</p>
               </div>
             )}
-            {/* 명함 정렬 가이드 프레임 */}
-            {status === "ready" && <div className="guide-box" aria-hidden />}
+            {/* 명함 정렬 가이드 프레임(표준 명함 9:5 비율) */}
+            {status === "ready" && (
+              <>
+                <div className="guide-box" aria-hidden />
+                <p className="guide-caption">명함을 사각형에 맞춰 주세요 · 9×5cm</p>
+              </>
+            )}
           </div>
 
           <div className="actions">

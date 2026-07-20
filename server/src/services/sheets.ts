@@ -312,6 +312,7 @@ async function renameFirstSheet(
 export async function createSpreadsheet(
   title: string,
   shareWithEmail?: string,
+  shareWithDomain?: boolean,
 ): Promise<SheetMeta> {
   const ctx = getAuth();
   const defaultTab = env.GOOGLE_SHEETS_TAB_NAME;
@@ -385,9 +386,31 @@ export async function createSpreadsheet(
       });
     } catch (e) {
       console.error(
-        "[sheets] 생성된 시트 공유 실패(시트는 생성됨):",
+        "[sheets] 생성된 시트 이메일 공유 실패(시트는 생성됨):",
         e instanceof Error ? e.message : String(e),
       );
+    }
+  }
+
+  // 회사 도메인 전체 편집자 공유(요청 + 도메인 설정 시). 실패는 비치명적.
+  if (shareWithDomain) {
+    const domain = env.GOOGLE_WORKSPACE_DOMAIN?.trim();
+    if (!domain) {
+      console.error("[sheets] 도메인 공유 요청됐으나 GOOGLE_WORKSPACE_DOMAIN 미설정 — 건너뜀");
+    } else {
+      try {
+        await ctx.drive.permissions.create({
+          fileId: spreadsheetId,
+          supportsAllDrives: true,
+          sendNotificationEmail: false,
+          requestBody: { role: "writer", type: "domain", domain },
+        });
+      } catch (e) {
+        console.error(
+          "[sheets] 도메인 공유 실패(시트는 생성됨). 관리자 도메인 공유 정책을 확인하세요:",
+          e instanceof Error ? e.message : String(e),
+        );
+      }
     }
   }
 
